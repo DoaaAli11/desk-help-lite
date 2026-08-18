@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { db } from "./store";
 import type { RoleName, User } from "./types";
 
@@ -12,13 +13,12 @@ interface AuthValue {
   user: SessionUser | null;
   ready: boolean;
   signIn: (email: string, password: string) => Promise<SessionUser>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
-const SESSION_KEY = "helpdesk-lite:session";
 
-export const DEMO_PASSWORD = "Demo123!";
+export const DEMO_PASSWORD = "HelpDesk!Lite2026";
 
 export const demoAccounts: Array<{ email: string; role: RoleName; name: string }> = [
   { email: "employee@helpdesk.demo", role: "Employee", name: "Ahmed Hassan" },
@@ -40,34 +40,82 @@ export function hydrate(user: User): SessionUser {
   return { ...user, role, teamName, initials };
 }
 
+/** Links the signed-in account to its directory record and loads it. */
+async function loadSessionUser(): Promise<SessionUser | null> {
+  const { data: linked, error: linkError } = await supabase.rpc("ensure_profile");
+  if (linkError) throw new Error(linkError.message);
+  if (!linked) return null;
+
+  const { data, error } = await supabase
+    .from("app_users")
+    .select("*")
+    .eq("id", linked)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? hydrate(data as User) : null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const id = window.localStorage.getItem(SESSION_KEY);
-      const found = id ? db.users.find((u) => u.id === id) : null;
-      if (found) setUser(hydrate(found));
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
+    let active = true;
+
+    const resolve = async (hasSession: boolean) => {
+      if (!hasSession) {
+        if (active) setUser(null);
+        return;
+      }
+      try {
+        const next = await loadSessionUser();
+        if (active) setUser(next);
+      } catch {
+        if (active) setUser(null);
+      }
+    };
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      await resolve(!!data.session);
+      if (active) setReady(true);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        void resolve(!!session);
+      }
+    });
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 400));
-    const found = db.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (!found) throw new Error("No account found with that email address.");
-    if (password !== DEMO_PASSWORD) throw new Error("Incorrect password. Try Demo123!");
-    const session = hydrate(found);
-    window.localStorage.setItem(SESSION_KEY, session.id);
+    const cleanEmail = email.trim().toLowerCase();
+    let result = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+
+    // Demo accounts are provisioned on first sign-in.
+    const isDemo = demoAccounts.some((a) => a.email === cleanEmail);
+    if (result.error && isDemo && password === DEMO_PASSWORD) {
+      const signUp = await supabase.auth.signUp({ email: cleanEmail, password });
+      if (signUp.error) throw new Error(signUp.error.message);
+      result = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+    }
+    if (result.error) throw new Error("Incorrect email or password.");
+
+    const session = await loadSessionUser();
+    if (!session) {
+      await supabase.auth.signOut();
+      throw new Error("No HelpDesk account is linked to that email address.");
+    }
     setUser(session);
     return session;
   }, []);
 
-  const signOut = useCallback(() => {
-    window.localStorage.removeItem(SESSION_KEY);
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
   }, []);
 
