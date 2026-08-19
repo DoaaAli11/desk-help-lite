@@ -59,14 +59,20 @@ function AnalyticsPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <Panel title="Priority mix">
-                {Object.entries(stats?.byPriority ?? {}).map(([name, count]) => (
-                  <Bar key={name} label={name} count={count} total={total} />
-                ))}
+                <DonutChart
+                  data={Object.entries(stats?.byPriority ?? {}).map(([label, value]) => ({
+                    label,
+                    value,
+                  }))}
+                />
               </Panel>
               <Panel title="Status distribution">
-                {Object.entries(stats?.byStatus ?? {}).map(([name, count]) => (
-                  <Bar key={name} label={name} count={count} total={total} />
-                ))}
+                <DonutChart
+                  data={Object.entries(stats?.byStatus ?? {}).map(([label, value]) => ({
+                    label,
+                    value,
+                  }))}
+                />
               </Panel>
               <Panel title="Requests by category">
                 {(stats?.byCategory ?? []).map((c) => (
