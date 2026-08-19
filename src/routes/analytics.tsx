@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/hd/AppShell";
 import { getDashboardStats } from "@/lib/data-service";
 import { useAuth } from "@/lib/auth";
+import { DonutChart } from "@/components/hd/DonutChart";
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({
@@ -59,14 +60,20 @@ function AnalyticsPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <Panel title="Priority mix">
-                {Object.entries(stats?.byPriority ?? {}).map(([name, count]) => (
-                  <Bar key={name} label={name} count={count} total={total} />
-                ))}
+                <DonutChart
+                  data={Object.entries(stats?.byPriority ?? {}).map(([label, value]) => ({
+                    label,
+                    value,
+                  }))}
+                />
               </Panel>
               <Panel title="Status distribution">
-                {Object.entries(stats?.byStatus ?? {}).map(([name, count]) => (
-                  <Bar key={name} label={name} count={count} total={total} />
-                ))}
+                <DonutChart
+                  data={Object.entries(stats?.byStatus ?? {}).map(([label, value]) => ({
+                    label,
+                    value,
+                  }))}
+                />
               </Panel>
               <Panel title="Requests by category">
                 {(stats?.byCategory ?? []).map((c) => (
