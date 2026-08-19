@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/hd/AppShell";
 import { getDashboardStats } from "@/lib/data-service";
 import { useAuth } from "@/lib/auth";
+import { DonutChart } from "@/components/hd/DonutChart";
 
 export const Route = createFileRoute("/analytics")({
   head: () => ({
