@@ -366,16 +366,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_app_user_id: { Args: never; Returns: string }
       ensure_profile: { Args: never; Returns: string }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_staff: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "employee" | "support" | "manager" | "operations" | "engineer"

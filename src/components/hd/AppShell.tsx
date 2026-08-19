@@ -1,4 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   BarChart3,
@@ -48,6 +49,7 @@ export function AppShell({
 }) {
   const { user, ready, signOut } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
@@ -124,8 +126,10 @@ export function AppShell({
         </div>
         <button
           type="button"
-          onClick={() => {
-            signOut();
+          onClick={async () => {
+            await queryClient.cancelQueries();
+            queryClient.clear();
+            await signOut();
             navigate({ to: "/", replace: true });
           }}
           className="mt-4 flex w-full items-center gap-2 rounded-lg px-1 py-2 text-sm text-sidebar-muted transition-colors hover:text-sidebar-foreground"
