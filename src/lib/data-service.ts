@@ -106,18 +106,6 @@ export async function getTicket(idOrNumber: string): Promise<TicketView | null> 
   return viewOf(row, await fetchHistory([row.id]));
 }
 
-async function nextTicketNumber(): Promise<string> {
-  const { data, error } = await supabase
-    .from("tickets")
-    .select("ticket_number")
-    .order("ticket_number", { ascending: false })
-    .limit(1);
-  if (error) throw new Error(error.message);
-  const last = data?.[0]?.ticket_number ?? "HD-1000";
-  const n = Number.parseInt(last.replace("HD-", ""), 10);
-  return `HD-${(Number.isFinite(n) ? n : 1000) + 1}`;
-}
-
 export async function createTicket(
   input: CreateTicketInput,
   currentUserId: string,
@@ -127,12 +115,10 @@ export async function createTicket(
   if (!cat || !pri) throw new Error("Unknown category or priority.");
 
   const stamp = new Date().toISOString();
-  const number = await nextTicketNumber();
-  const id = `tkt-${number.replace("HD-", "")}-${Math.random().toString(36).slice(2, 7)}`;
 
+  // `id` and `ticket_number` are assigned by the database (sequence-backed),
+  // so concurrent authors never collide.
   const payload = {
-    id,
-    ticket_number: number,
     title: input.title.trim(),
     description: input.additionalInfo?.trim()
       ? `${input.description.trim()}\n\nAdditional information: ${input.additionalInfo.trim()}`
@@ -149,18 +135,24 @@ export async function createTicket(
     closed_at: null,
   };
 
-  const { data, error } = await supabase.from("tickets").insert(payload).select("*").single();
+  const { data, error } = await supabase
+    .from("tickets")
+    .insert(payload as never)
+    .select("*")
+    .single();
   if (error) throw new Error(error.message);
 
+  const created = data as Row;
+
   const { error: histError } = await supabase.from("ticket_status_history").insert({
-    id: `hist-${id}-0`,
-    ticket_id: id,
+    ticket_id: created.id,
     old_status_id: null,
     new_status_id: "st-new",
     changed_by: currentUserId,
     created_at: stamp,
-  });
+  } as never);
   if (histError) throw new Error(histError.message);
+
 
   const row = data as Row;
   return viewOf(row, await fetchHistory([row.id]));
