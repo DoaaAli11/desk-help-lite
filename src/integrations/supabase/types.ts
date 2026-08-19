@@ -205,7 +205,7 @@ export type Database = {
         Insert: {
           changed_by: string
           created_at?: string
-          id: string
+          id?: string
           new_status_id: string
           old_status_id?: string | null
           ticket_id: string
@@ -274,11 +274,11 @@ export type Database = {
           created_at?: string
           created_by: string
           description: string
-          id: string
+          id?: string
           priority_id: string
           resolved_at?: string | null
           status_id: string
-          ticket_number: string
+          ticket_number?: string
           title: string
           updated_at?: string
         }
