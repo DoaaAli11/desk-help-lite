@@ -153,9 +153,7 @@ export async function createTicket(
   } as never);
   if (histError) throw new Error(histError.message);
 
-
-  const row = data as Row;
-  return viewOf(row, await fetchHistory([row.id]));
+  return viewOf(created, await fetchHistory([created.id]));
 }
 
 export async function updateTicket(id: string, patch: Partial<Ticket>): Promise<TicketView> {
