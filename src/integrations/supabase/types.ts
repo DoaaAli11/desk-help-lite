@@ -205,7 +205,7 @@ export type Database = {
         Insert: {
           changed_by: string
           created_at?: string
-          id: string
+          id?: string
           new_status_id: string
           old_status_id?: string | null
           ticket_id: string
@@ -274,11 +274,11 @@ export type Database = {
           created_at?: string
           created_by: string
           description: string
-          id: string
+          id?: string
           priority_id: string
           resolved_at?: string | null
           status_id: string
-          ticket_number: string
+          ticket_number?: string
           title: string
           updated_at?: string
         }
@@ -366,16 +366,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_app_user_id: { Args: never; Returns: string }
       ensure_profile: { Args: never; Returns: string }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_staff: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "employee" | "support" | "manager" | "operations" | "engineer"
