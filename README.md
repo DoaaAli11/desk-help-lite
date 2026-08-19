@@ -1,4 +1,5 @@
 # Help Desk Spark
+adding signup
 
 Lovable Prompt — HelpDesk Lite V1
 Implement Published Figma Design + Fast Working Demo + Real Backend
