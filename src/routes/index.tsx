@@ -123,10 +123,42 @@ function SignInPage() {
       <section className="flex items-center justify-center bg-secondary px-4 py-12">
         <div className="w-full max-w-md">
           <div className="surface-card overflow-hidden">
-            <div className="border-b border-border px-6 py-4">
-              <p className="text-sm font-semibold text-primary">Sign In</p>
+            <div className="grid grid-cols-2 border-b border-border">
+              {(["signin", "signup"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => switchMode(m)}
+                  className={`px-6 py-4 text-sm font-semibold transition-colors ${
+                    mode === m
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m === "signin" ? "Sign In" : "Create Account"}
+                </button>
+              ))}
             </div>
             <form onSubmit={submit} className="space-y-4 px-6 py-6" noValidate>
+              {mode === "signup" ? (
+                <label className="block">
+                  <span className="text-sm font-medium">
+                    Full name <span className="text-destructive">*</span>
+                  </span>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Jane Doe"
+                    maxLength={100}
+                    className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+                  />
+                  {errors.name ? (
+                    <span className="mt-1 block text-xs text-destructive">{errors.name}</span>
+                  ) : null}
+                </label>
+              ) : null}
+
               <label className="block">
                 <span className="text-sm font-medium">
                   Email address <span className="text-destructive">*</span>
