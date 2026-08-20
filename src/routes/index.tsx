@@ -23,30 +23,61 @@ export const Route = createFileRoute("/")({
   component: SignInPage,
 });
 
+type Mode = "signin" | "signup";
+
 function SignInPage() {
-  const { signIn, user, ready } = useAuth();
+  const { signIn, signUp, user, ready } = useAuth();
   const navigate = useNavigate();
+  const [mode, setMode] = useState<Mode>("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+    confirm?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (ready && user) navigate({ to: "/dashboard", replace: true });
   }, [ready, user, navigate]);
 
+  function switchMode(next: Mode) {
+    setMode(next);
+    setErrors({});
+    setPassword("");
+    setConfirm("");
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
+    if (mode === "signup") {
+      if (!name.trim()) next.name = "Full name is required.";
+      else if (name.trim().length > 100) next.name = "Name must be under 100 characters.";
+    }
     if (!email.trim()) next.email = "Email address is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      next.email = "Enter a valid email address.";
     if (!password) next.password = "Password is required.";
+    else if (mode === "signup" && password.length < 8)
+      next.password = "Password must be at least 8 characters.";
+    if (mode === "signup" && confirm !== password) next.confirm = "Passwords do not match.";
     setErrors(next);
     if (Object.keys(next).length) return;
 
     setLoading(true);
     try {
-      const session = await signIn(email, password);
-      toast.success(`Welcome back, ${session.name.split(" ")[0]}.`);
+      const session =
+        mode === "signin" ? await signIn(email, password) : await signUp(name, email, password);
+      toast.success(
+        mode === "signin"
+          ? `Welcome back, ${session.name.split(" ")[0]}.`
+          : `Account created — welcome, ${session.name.split(" ")[0]}.`,
+      );
       navigate({ to: "/dashboard" });
     } catch (err) {
       toast.error((err as Error).message);
@@ -92,10 +123,42 @@ function SignInPage() {
       <section className="flex items-center justify-center bg-secondary px-4 py-12">
         <div className="w-full max-w-md">
           <div className="surface-card overflow-hidden">
-            <div className="border-b border-border px-6 py-4">
-              <p className="text-sm font-semibold text-primary">Sign In</p>
+            <div className="grid grid-cols-2 border-b border-border">
+              {(["signin", "signup"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => switchMode(m)}
+                  className={`px-6 py-4 text-sm font-semibold transition-colors ${
+                    mode === m
+                      ? "border-b-2 border-primary text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m === "signin" ? "Sign In" : "Create Account"}
+                </button>
+              ))}
             </div>
             <form onSubmit={submit} className="space-y-4 px-6 py-6" noValidate>
+              {mode === "signup" ? (
+                <label className="block">
+                  <span className="text-sm font-medium">
+                    Full name <span className="text-destructive">*</span>
+                  </span>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Jane Doe"
+                    maxLength={100}
+                    className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+                  />
+                  {errors.name ? (
+                    <span className="mt-1 block text-xs text-destructive">{errors.name}</span>
+                  ) : null}
+                </label>
+              ) : null}
+
               <label className="block">
                 <span className="text-sm font-medium">
                   Email address <span className="text-destructive">*</span>
@@ -120,13 +183,33 @@ function SignInPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={mode === "signup" ? "At least 8 characters" : "Enter your password"}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
                 />
                 {errors.password ? (
                   <span className="mt-1 block text-xs text-destructive">{errors.password}</span>
                 ) : null}
               </label>
+
+              {mode === "signup" ? (
+                <label className="block">
+                  <span className="text-sm font-medium">
+                    Confirm password <span className="text-destructive">*</span>
+                  </span>
+                  <input
+                    type="password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    placeholder="Re-enter your password"
+                    autoComplete="new-password"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+                  />
+                  {errors.confirm ? (
+                    <span className="mt-1 block text-xs text-destructive">{errors.confirm}</span>
+                  ) : null}
+                </label>
+              ) : null}
 
               <button
                 type="submit"
@@ -136,8 +219,24 @@ function SignInPage() {
                 {loading ? (
                   <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 ) : null}
-                Sign in
+                {mode === "signin" ? "Sign in" : "Create account"}
               </button>
+
+              <p className="text-center text-xs text-muted-foreground">
+                {mode === "signin" ? "New to HelpDesk Lite?" : "Already have an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode(mode === "signin" ? "signup" : "signin")}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  {mode === "signin" ? "Create an account" : "Sign in"}
+                </button>
+              </p>
+              {mode === "signup" ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  New accounts start with the Employee role.
+                </p>
+              ) : null}
             </form>
           </div>
 
