@@ -13,6 +13,7 @@ interface AuthValue {
   user: SessionUser | null;
   ready: boolean;
   signIn: (email: string, password: string) => Promise<SessionUser>;
+  signUp: (name: string, email: string, password: string) => Promise<SessionUser>;
   signOut: () => Promise<void>;
 }
 
