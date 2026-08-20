@@ -183,13 +183,33 @@ function SignInPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={mode === "signup" ? "At least 8 characters" : "Enter your password"}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
                 />
                 {errors.password ? (
                   <span className="mt-1 block text-xs text-destructive">{errors.password}</span>
                 ) : null}
               </label>
+
+              {mode === "signup" ? (
+                <label className="block">
+                  <span className="text-sm font-medium">
+                    Confirm password <span className="text-destructive">*</span>
+                  </span>
+                  <input
+                    type="password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    placeholder="Re-enter your password"
+                    autoComplete="new-password"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+                  />
+                  {errors.confirm ? (
+                    <span className="mt-1 block text-xs text-destructive">{errors.confirm}</span>
+                  ) : null}
+                </label>
+              ) : null}
 
               <button
                 type="submit"
@@ -199,8 +219,24 @@ function SignInPage() {
                 {loading ? (
                   <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 ) : null}
-                Sign in
+                {mode === "signin" ? "Sign in" : "Create account"}
               </button>
+
+              <p className="text-center text-xs text-muted-foreground">
+                {mode === "signin" ? "New to HelpDesk Lite?" : "Already have an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode(mode === "signin" ? "signup" : "signin")}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  {mode === "signin" ? "Create an account" : "Sign in"}
+                </button>
+              </p>
+              {mode === "signup" ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  New accounts start with the Employee role.
+                </p>
+              ) : null}
             </form>
           </div>
 
