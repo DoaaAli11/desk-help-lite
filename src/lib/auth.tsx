@@ -115,12 +115,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return session;
   }, []);
 
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+
+    const { error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        data: { full_name: cleanName },
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    if (error) {
+      throw new Error(
+        /already/i.test(error.message)
+          ? "An account with that email already exists. Sign in instead."
+          : error.message,
+      );
+    }
+
+    const signedIn = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+    if (signedIn.error) throw new Error(signedIn.error.message);
+
+    const session = await loadSessionUser();
+    if (!session) {
+      await supabase.auth.signOut();
+      throw new Error("We couldn't finish setting up your account. Please try again.");
+    }
+    setUser(session);
+    return session;
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, ready, signIn, signOut }), [user, ready, signIn, signOut]);
+  const value = useMemo(
+    () => ({ user, ready, signIn, signUp, signOut }),
+    [user, ready, signIn, signUp, signOut],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
