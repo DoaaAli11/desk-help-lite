@@ -23,30 +23,61 @@ export const Route = createFileRoute("/")({
   component: SignInPage,
 });
 
+type Mode = "signin" | "signup";
+
 function SignInPage() {
-  const { signIn, user, ready } = useAuth();
+  const { signIn, signUp, user, ready } = useAuth();
   const navigate = useNavigate();
+  const [mode, setMode] = useState<Mode>("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+    confirm?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (ready && user) navigate({ to: "/dashboard", replace: true });
   }, [ready, user, navigate]);
 
+  function switchMode(next: Mode) {
+    setMode(next);
+    setErrors({});
+    setPassword("");
+    setConfirm("");
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
+    if (mode === "signup") {
+      if (!name.trim()) next.name = "Full name is required.";
+      else if (name.trim().length > 100) next.name = "Name must be under 100 characters.";
+    }
     if (!email.trim()) next.email = "Email address is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      next.email = "Enter a valid email address.";
     if (!password) next.password = "Password is required.";
+    else if (mode === "signup" && password.length < 8)
+      next.password = "Password must be at least 8 characters.";
+    if (mode === "signup" && confirm !== password) next.confirm = "Passwords do not match.";
     setErrors(next);
     if (Object.keys(next).length) return;
 
     setLoading(true);
     try {
-      const session = await signIn(email, password);
-      toast.success(`Welcome back, ${session.name.split(" ")[0]}.`);
+      const session =
+        mode === "signin" ? await signIn(email, password) : await signUp(name, email, password);
+      toast.success(
+        mode === "signin"
+          ? `Welcome back, ${session.name.split(" ")[0]}.`
+          : `Account created — welcome, ${session.name.split(" ")[0]}.`,
+      );
       navigate({ to: "/dashboard" });
     } catch (err) {
       toast.error((err as Error).message);
